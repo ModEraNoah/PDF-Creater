@@ -4,7 +4,9 @@
 #include <string.h>
 #include <sys/types.h>
 
-#define FONTSIZE 14
+#define FONTSIZE 12
+#define PAGEWIDTH 595
+#define PAGELENGTH 842
 
 static uint objectCounter = 0;
 
@@ -20,7 +22,7 @@ char* getStart() {
 
 int getDigitStringWidth(int digit) {
 	int charCounter = 1;
-	while ((digit/(pow(10, charCounter))) >= 0.1) {
+	while ((int)(digit/(pow(10, charCounter)))) {
 		charCounter++;
 	}
 	return charCounter;
@@ -38,7 +40,7 @@ char** craftObjectContent(int objectNumber, char contentString[]) {
 
 	int length = strlen(objectBeginning) + strlen(contentString) + strlen(objectEnding);
 	// char *content= (char*) malloc((length + 8) * sizeof(char));
-	char *content= (char*) malloc(length  * sizeof(char));
+	char *content= (char*) malloc((length+1)  * sizeof(char));
 	res[0] = content;
 
 	strcat(content, objectBeginning);
@@ -56,7 +58,9 @@ Object getPdfRoot(int objectNumber) {
 }
 
 Object getPagesRoot(int objectNumber, int count, int kids[]) {
-	char **content = craftObjectContent(objectNumber,"<</Type /Pages /Kids [3 0 R] /Count 1>>");
+	char str[200];
+	sprintf(str, "<</Type /Pages /Kids [3 0 R] /Count 1 /MediaBox [0 0 %d %d]>>", PAGEWIDTH, PAGELENGTH);
+	char **content = craftObjectContent(objectNumber, str);
 
 	Object temp = {objectNumber,*content};
 	return temp;
@@ -79,23 +83,98 @@ Object createPageObject(int objectNumber, int parent, int contents) {
 	return temp;
 }
 
+char** getFormattedText(char text[]) {
+	char **t = (char**) malloc(sizeof(char*));
+	t[0] = (char*) malloc(strlen(text) + 100*sizeof(char));
+
+	int charPosition = 1;
+	int rowCount = 1;
+	int characterCount = 0;
+	
+	char currentWord[100];
+	int currentWordCounter = 0;
+	t[0][0] = '(';
+	for (int i = 0; text[i] != '\0'; i++) {
+		// strcat(t[0], text[i];
+		if (text[i] != ' ')
+			currentWord[currentWordCounter] = text[i];
+
+		charPosition++;
+		characterCount++;
+		currentWordCounter++;
+		if (text[i] == ' ') {
+			// t[0][charPosition-1] = ' ';
+			// 0.5 for Time Roman; 0.6 for e.g. Arial
+		if ((int)((characterCount) / ((PAGEWIDTH - 15)/(0.5 * FONTSIZE))) == 1) {
+				strcat(t[0], ")");
+				charPosition++;
+				strcat(t[0], " ");
+				charPosition++;
+
+				if (rowCount == 1) {
+					strcat(t[0], "T");
+					charPosition++;
+					strcat(t[0], "j");
+					charPosition++;
+				} else {
+					strcat(t[0], "\'");
+					charPosition++;
+				}
+				strcat(t[0], "\n");
+				charPosition++;
+				strcat(t[0], "(");
+				charPosition++;
+				strcat(t[0], currentWord);
+
+				characterCount = 0;
+				rowCount++;
+			} else {
+				strcat(t[0], currentWord);
+			}
+			strcat(t[0], " ");
+			memset(currentWord, 0, 100);
+			currentWordCounter = 0;
+		}
+	}
+
+	char isTooLongAtEnd = (int)((characterCount) / ((PAGEWIDTH - 15)/(0.5 * FONTSIZE))) == 0;
+	if (isTooLongAtEnd) {
+		strcat(t[0], currentWord);
+	} 
+	strcat(t[0], ") ");
+	if (rowCount == 1) {
+		strcat(t[0], "Tj");
+	} else {
+		strcat(t[0], "\'");
+	}
+
+	if(! isTooLongAtEnd) {
+		strcat(t[0], "\n(");
+		strcat(t[0], currentWord);
+		strcat(t[0], ") \'");
+	}
+	
+	return t;
+}
+
 Object createTextObject(int objectNumber, char text[]) {
 		
-	int textLen = strlen(text) + 1;
-	char *str = "stream\nBT\n/F1 %d Tf\n%d TL\n70 300 TD\n(%s) Tj\nET\nendstream";
+	char **formattedText = getFormattedText(text);
+	int textLen = strlen(formattedText[0]) + 1;
+	char *str = "stream\nBT\n/F1 %d Tf\n%d TL\n30 %d Td\n%s\nET\nendstream";
 	int strLength = strlen(str) + 1;
-	// int streamLength = 54+textLen + 2 + 12;
-	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE);// + 12;
+	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE) + getDigitStringWidth(PAGELENGTH);// + 12;
 	char stream[streamLength];
-	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, text);
-
-	// TODO: ERROR at dict calculation
+	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20,formattedText[0]);
+	
 	int charCounter = getDigitStringWidth(streamLength);
-	char dict[13+charCounter + 1] ;
-	snprintf(dict, 13+charCounter+1, "<</Length %d>>\n", streamLength);
+	char *dictStr = "<</Length %d>>\n";
+	int dictLength = strlen(dictStr) + 1;
+	char dict[charCounter + dictLength] ;
+	snprintf(dict, dictLength + charCounter, dictStr, streamLength);
 
-	char contentString[streamLength + 13 + charCounter + 1];
-	strcat(contentString,dict);
+	char contentString[streamLength + charCounter + dictLength + 1];
+	strcpy(contentString, dict);
 	strcat(contentString,stream);
 
 	char **content = craftObjectContent(objectNumber, contentString);
@@ -134,26 +213,28 @@ int main(void) {
 	printf("%s",getStart());
 
 	printf("%s\n", obs[0].content);
-	// free(obs[0].content);
 
-	// printf("%i 0 obj\n", obs[1].objectNumber);
-	// printf("%s\n", obs[1].content);
-	// printf("endobj\n");
 	printf("%s\n", obs[1].content);
-	// free(obs[1].content);
 
 	int parent = objectCounter;
 	obs[2] = createPageObject(++objectCounter, parent, parent+2);
 	printf("%s\n", obs[2].content);
 
-	obs[3]= createTextObject(++objectCounter, "Hallo Welt!");
+	// obs[3]= createTextObject(++objectCounter, "Hallo Welt! Blub... Neue Zeile? hier steht noch viel mehr.... und noch was... sklfaslfdkajwejfkesf ksjfsfej");
+	char *textInput = malloc(10000 * sizeof(char));
+	int c;
+	int i = 0;
+    while ((c = getchar()) != EOF) {
+		// strcat(textInput, (char*)c);
+		textInput[i] = c;
+		i++;
+    }
+	obs[3]= createTextObject(++objectCounter, textInput);
 	printf("%s\n", obs[3].content);
-	// free(obs[2].content);
 
-	// // printf("before calling getXref");
 	char **temp = getXref(obs);
 	printf("%s", temp[0]);
-	printf("<</Size 5 /Root 1 0 R>>\n");
+	printf("<</Size %d /Root 1 0 R>>\n", objectCounter+1);
 	printf("startxref\n");
 	printf("%d\n", currentLength);
 	printf("%%%%EOF\n");

@@ -85,45 +85,34 @@ Object createPageObject(int objectNumber, int parent, int contents) {
 
 char** getFormattedText(char text[]) {
 	char **t = (char**) malloc(sizeof(char*));
-	t[0] = (char*) malloc(strlen(text) + 100*sizeof(char));
+	t[0] = (char*) malloc(strlen(text) + 300*sizeof(char));
 
-	int charPosition = 1;
+	strcpy(t[0], "");
 	int rowCount = 1;
 	int characterCount = 0;
 	
 	char currentWord[100];
 	int currentWordCounter = 0;
+	memset(currentWord, 0, 100);
 	t[0][0] = '(';
 	for (int i = 0; text[i] != '\0'; i++) {
-		// strcat(t[0], text[i];
 		if (text[i] != ' ')
 			currentWord[currentWordCounter] = text[i];
 
-		charPosition++;
 		characterCount++;
 		currentWordCounter++;
 		if (text[i] == ' ') {
-			// t[0][charPosition-1] = ' ';
 			// 0.5 for Time Roman; 0.6 for e.g. Arial
-		if ((int)((characterCount) / ((PAGEWIDTH - 15)/(0.5 * FONTSIZE))) == 1) {
-				strcat(t[0], ")");
-				charPosition++;
-				strcat(t[0], " ");
-				charPosition++;
+			char isLongerThanLine = (int)((characterCount) / ((PAGEWIDTH - 15)/(0.5 * FONTSIZE))) == 1;
+			if (isLongerThanLine) {
+				strcat(t[0], ") ");
 
 				if (rowCount == 1) {
-					strcat(t[0], "T");
-					charPosition++;
-					strcat(t[0], "j");
-					charPosition++;
+					strcat(t[0], "Tj");
 				} else {
 					strcat(t[0], "\'");
-					charPosition++;
 				}
-				strcat(t[0], "\n");
-				charPosition++;
-				strcat(t[0], "(");
-				charPosition++;
+				strcat(t[0], "\n(");
 				strcat(t[0], currentWord);
 
 				characterCount = 0;
@@ -137,8 +126,8 @@ char** getFormattedText(char text[]) {
 		}
 	}
 
-	char isTooLongAtEnd = (int)((characterCount) / ((PAGEWIDTH - 15)/(0.5 * FONTSIZE))) == 0;
-	if (isTooLongAtEnd) {
+	char isTooLongAtEnd = (int)(characterCount / (PAGEWIDTH/(0.5*FONTSIZE))) == 1;
+	if (!isTooLongAtEnd) {
 		strcat(t[0], currentWord);
 	} 
 	strcat(t[0], ") ");
@@ -148,7 +137,7 @@ char** getFormattedText(char text[]) {
 		strcat(t[0], "\'");
 	}
 
-	if(! isTooLongAtEnd) {
+	if(isTooLongAtEnd) {
 		strcat(t[0], "\n(");
 		strcat(t[0], currentWord);
 		strcat(t[0], ") \'");

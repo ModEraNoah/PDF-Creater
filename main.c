@@ -85,14 +85,12 @@ Object createTextObject(int objectNumber, char text[]) {
 	char *str = "stream\nBT\n/F1 %d Tf\n%d TL\n70 300 TD\n(%s) Tj\nET\nendstream";
 	int strLength = strlen(str) + 1;
 	// int streamLength = 54+textLen + 2 + 12;
-	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE) + 12;
+	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE);// + 12;
 	char stream[streamLength];
 	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, text);
 
-	int charCounter = 1;
-	while (streamLength/(pow(10, charCounter))) {
-		charCounter++;
-	}
+	// TODO: ERROR at dict calculation
+	int charCounter = getDigitStringWidth(streamLength);
 	char dict[13+charCounter + 1] ;
 	snprintf(dict, 13+charCounter+1, "<</Length %d>>\n", streamLength);
 

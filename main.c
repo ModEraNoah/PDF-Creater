@@ -1,7 +1,10 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+
+#define FONTSIZE 14
 
 static uint objectCounter = 0;
 
@@ -15,13 +18,18 @@ char* getStart() {
 }
 
 
+int getDigitStringWidth(int digit) {
+	int charCounter = 1;
+	while ((digit/(pow(10, charCounter))) >= 0.1) {
+		charCounter++;
+	}
+	return charCounter;
+}
+
 char** craftObjectContent(int objectNumber, char contentString[]) {
 	char **res = malloc(sizeof(char*));
 
-	int charCounter = 1;
-	while (objectNumber/(charCounter * 10)) {
-		charCounter++;
-	}
+	int charCounter = getDigitStringWidth(objectNumber);
 
 	char objectBeginning[charCounter + 8];
 	snprintf(objectBeginning, sizeof(objectBeginning), "%i 0 obj\n", objectNumber);
@@ -29,7 +37,8 @@ char** craftObjectContent(int objectNumber, char contentString[]) {
 	char *objectEnding = "\nendobj";
 
 	int length = strlen(objectBeginning) + strlen(contentString) + strlen(objectEnding);
-	char *content= (char*) malloc((length + 8) * sizeof(char));
+	// char *content= (char*) malloc((length + 8) * sizeof(char));
+	char *content= (char*) malloc(length  * sizeof(char));
 	res[0] = content;
 
 	strcat(content, objectBeginning);
@@ -54,19 +63,15 @@ Object getPagesRoot(int objectNumber, int count, int kids[]) {
 }
 
 Object createPageObject(int objectNumber, int parent, int contents) {
+
 	int additionalLen = 0;
-	int charCounter = 1;
-	while (parent/(charCounter * 10)) {
-		charCounter++;
-	}
-	additionalLen = charCounter;
-	charCounter = 1;
-	while (contents/(charCounter * 10)) {
-		charCounter++;
-	}
-	additionalLen += charCounter;
-	char contentString[44 + additionalLen];
-	snprintf(contentString, 44 + additionalLen, "<</Type /Page /Parent %d 0 R /Contents %d 0 R>>", parent, contents);
+	additionalLen = getDigitStringWidth(parent);
+	additionalLen += getDigitStringWidth(contents);
+
+	char *str = "<</Type /Page /Parent %d 0 R /Contents %d 0 R>>";
+	int contentLength = strlen(str) + 1;
+	char contentString[contentLength + additionalLen];
+	snprintf(contentString, contentLength, str, parent, contents);
 
 	char **content = craftObjectContent(objectNumber, contentString);
 
@@ -76,19 +81,22 @@ Object createPageObject(int objectNumber, int parent, int contents) {
 
 Object createTextObject(int objectNumber, char text[]) {
 		
-	int textLen = strlen(text);
-	int streamLength = 48+textLen+1;
+	int textLen = strlen(text) + 1;
+	char *str = "stream\nBT\n/F1 %d Tf\n%d TL\n70 300 TD\n(%s) Tj\nET\nendstream";
+	int strLength = strlen(str) + 1;
+	// int streamLength = 54+textLen + 2 + 12;
+	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE) + 12;
 	char stream[streamLength];
-	snprintf(stream, streamLength, "stream\nBT\n/F1 14 Tf\n70 300 TD\n(%s) Tj\nET\nendstream", text);
+	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, text);
 
 	int charCounter = 1;
-	while (streamLength/(charCounter * 10)) {
+	while (streamLength/(pow(10, charCounter))) {
 		charCounter++;
 	}
-	char dict[13+charCounter] ;
-	snprintf(dict, 13+charCounter, "<</Length %d>>\n", streamLength);
+	char dict[13+charCounter + 1] ;
+	snprintf(dict, 13+charCounter+1, "<</Length %d>>\n", streamLength);
 
-	char contentString[streamLength + 13 + charCounter];
+	char contentString[streamLength + 13 + charCounter + 1];
 	strcat(contentString,dict);
 	strcat(contentString,stream);
 
@@ -147,7 +155,7 @@ int main(void) {
 	// // printf("before calling getXref");
 	char **temp = getXref(obs);
 	printf("%s", temp[0]);
-	printf("<</Size 4 /Root 1 0 R>>\n");
+	printf("<</Size 5 /Root 1 0 R>>\n");
 	printf("startxref\n");
 	printf("%d\n", currentLength);
 	printf("%%%%EOF\n");

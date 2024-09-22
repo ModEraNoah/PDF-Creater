@@ -103,7 +103,7 @@ char** getFormattedText(char text[]) {
 		currentWordCounter++;
 		if (text[i] == ' ') {
 			// 0.5 for Time Roman; 0.6 for e.g. Arial
-			char isLongerThanLine = (int)((characterCount) / ((PAGEWIDTH - 15)/(0.5 * FONTSIZE))) == 1;
+			char isLongerThanLine = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91;
 			if (isLongerThanLine) {
 				strcat(t[0], ") ");
 
@@ -126,7 +126,7 @@ char** getFormattedText(char text[]) {
 		}
 	}
 
-	char isTooLongAtEnd = (int)(characterCount / (PAGEWIDTH/(0.5*FONTSIZE))) == 1;
+	char isTooLongAtEnd = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91	;
 	if (!isTooLongAtEnd) {
 		strcat(t[0], currentWord);
 	} 

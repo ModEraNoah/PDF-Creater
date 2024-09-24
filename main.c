@@ -70,7 +70,7 @@ Object getPagesRoot(int objectNumber, int count, int kids[]) {
 		strcat(kidsArray, tmp);
 	}
 	char str[200];
-	sprintf(str, "<</Type /Pages /Kids [%s] /Count 1 /MediaBox [0 0 %d %d]>>",kidsArray, PAGEWIDTH, PAGELENGTH);
+	sprintf(str, "<</Type /Pages /Kids [%s] /Count %d /MediaBox [0 0 %d %d]>>",kidsArray, count,PAGEWIDTH, PAGELENGTH);
 	char **content = craftObjectContent(objectNumber, str);
 
 	Object temp = {objectNumber,*content};
@@ -215,8 +215,9 @@ int main(void) {
 		i++;
 	}
 
-	Object obs[4];
-	obs[0] = getPagesRoot(++objectCounter, 1, (int[]){4});
+	Object obs[6];
+	int kidsArray[] = {4, 6};
+	obs[0] = getPagesRoot(++objectCounter, sizeof(kidsArray)/sizeof(int), kidsArray);
 	int pagesRootNumber = objectCounter;
 	obs[1] = getPdfRoot(++objectCounter, pagesRootNumber);
 	Object *root = &obs[1];
@@ -225,6 +226,11 @@ int main(void) {
 	Object *textObject = &obs[2];
 
 	obs[3] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
+
+	obs[4]= createTextObject(++objectCounter, "Hallo! Ich bin Seite 2");
+	textObject = &obs[4];
+
+	obs[5] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
 
 	printf("%s",getStart());
 
@@ -236,6 +242,9 @@ int main(void) {
 	printf("%s\n", obs[2].content);
 
 	printf("%s\n", obs[3].content);
+	printf("%s\n", obs[4].content);
+
+	printf("%s\n", obs[5].content);
 
 	char **temp = getXref(obs);
 	printf("%s", temp[0]);

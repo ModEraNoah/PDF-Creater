@@ -50,16 +50,27 @@ char** craftObjectContent(int objectNumber, char contentString[]) {
 	return res;
 }
 
-Object getPdfRoot(int objectNumber) {
-	char **content = craftObjectContent(objectNumber, "<</Type /Catalog /Pages 2 0 R>>");
+Object getPdfRoot(int objectNumber, int pagesObjectNumber) {
+	char *tmp = "<</Type /Catalog /Pages %d 0 R>>";
+	int len = strlen(tmp) + getDigitStringWidth(pagesObjectNumber) + 1;
+	char buf[len];
+	snprintf(buf, len, "<</Type /Catalog /Pages %d 0 R>>", pagesObjectNumber);
+	char **content = craftObjectContent(objectNumber, buf);
 
 	Object temp = {objectNumber, *content};
 	return temp;
 }
 
 Object getPagesRoot(int objectNumber, int count, int kids[]) {
+	char kidsArray[200];
+	memset(kidsArray,0,200);
+	for (int i = 0; i < count; i++) {
+		char tmp[20];
+		snprintf(tmp, 20, "%d 0 R ", kids[i]);
+		strcat(kidsArray, tmp);
+	}
 	char str[200];
-	sprintf(str, "<</Type /Pages /Kids [3 0 R] /Count 1 /MediaBox [0 0 %d %d]>>", PAGEWIDTH, PAGELENGTH);
+	sprintf(str, "<</Type /Pages /Kids [%s] /Count 1 /MediaBox [0 0 %d %d]>>",kidsArray, PAGEWIDTH, PAGELENGTH);
 	char **content = craftObjectContent(objectNumber, str);
 
 	Object temp = {objectNumber,*content};
@@ -196,34 +207,43 @@ char** getXref(Object obs[]) {
 }
 
 int main(void) {
+	char *textInput = malloc(10000 * sizeof(char));
+	int c;
+	int i = 0;
+	while ((c = getchar()) != EOF) {
+		textInput[i] = c;
+		i++;
+	}
+
 	Object obs[4];
-	obs[0] = getPdfRoot(++objectCounter);
-	obs[1] = getPagesRoot(++objectCounter, 1, (int[]){3});
+	obs[0] = getPagesRoot(++objectCounter, 1, (int[]){4});
+	int pagesRootNumber = objectCounter;
+	obs[1] = getPdfRoot(++objectCounter, pagesRootNumber);
+	Object *root = &obs[1];
+
+	obs[2]= createTextObject(++objectCounter, textInput);
+	Object *textObject = &obs[2];
+
+	obs[3] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
+
 	printf("%s",getStart());
 
 	printf("%s\n", obs[0].content);
 
 	printf("%s\n", obs[1].content);
 
-	int parent = objectCounter;
-	obs[2] = createPageObject(++objectCounter, parent, parent+2);
+
 	printf("%s\n", obs[2].content);
 
-	// obs[3]= createTextObject(++objectCounter, "Hallo Welt! Blub... Neue Zeile? hier steht noch viel mehr.... und noch was... sklfaslfdkajwejfkesf ksjfsfej");
-	char *textInput = malloc(10000 * sizeof(char));
-	int c;
-	int i = 0;
-    while ((c = getchar()) != EOF) {
-		// strcat(textInput, (char*)c);
-		textInput[i] = c;
-		i++;
-    }
-	obs[3]= createTextObject(++objectCounter, textInput);
 	printf("%s\n", obs[3].content);
 
 	char **temp = getXref(obs);
 	printf("%s", temp[0]);
-	printf("<</Size %d /Root 1 0 R>>\n", objectCounter+1);
+	// printf("<</Size %d /Root 1 0 R>>\n", objectCounter+1);
+	int bufLength = strlen("<</Size %d /Root %d 0 R>>\n") + getDigitStringWidth(objectCounter + 1)+1;
+	char buf[bufLength];
+	snprintf(buf, bufLength, "<</Size %d /Root %d 0 R>>\n", objectCounter+1, root->objectNumber);
+	printf("%s",buf);
 	printf("startxref\n");
 	printf("%d\n", currentLength);
 	printf("%%%%EOF\n");

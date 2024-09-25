@@ -93,71 +93,6 @@ Object createPageObject(int objectNumber, int parent, int contents) {
 	return temp;
 }
 
-/*
-char** getFormattedText(char text[]) {
-	char **t = (char**) malloc(sizeof(char*));
-	t[0] = (char*) malloc(strlen(text) + 300*sizeof(char));
-
-	strcpy(t[0], "");
-	int rowCount = 1;
-	int characterCount = 0;
-	
-	char currentWord[100];
-	int currentWordCounter = 0;
-	memset(currentWord, 0, 100);
-	t[0][0] = '(';
-	for (int i = 0; text[i] != '\0'; i++) {
-		if (text[i] != ' ')
-			currentWord[currentWordCounter] = text[i];
-
-		characterCount++;
-		currentWordCounter++;
-		if (text[i] == ' ') {
-			// 0.5 for Time Roman; 0.6 for e.g. Arial
-			char isLongerThanLine = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91;
-			if (isLongerThanLine) {
-				strcat(t[0], ") ");
-
-				if (rowCount == 1) {
-					strcat(t[0], "Tj");
-				} else {
-					strcat(t[0], "\'");
-				}
-				strcat(t[0], "\n(");
-				strcat(t[0], currentWord);
-
-				characterCount = 0;
-				rowCount++;
-			} else {
-				strcat(t[0], currentWord);
-			}
-			strcat(t[0], " ");
-			memset(currentWord, 0, 100);
-			currentWordCounter = 0;
-		}
-	}
-
-	char isTooLongAtEnd = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91	;
-	if (!isTooLongAtEnd) {
-		strcat(t[0], currentWord);
-	} 
-	strcat(t[0], ") ");
-	if (rowCount == 1) {
-		strcat(t[0], "Tj");
-	} else {
-		strcat(t[0], "\'");
-	}
-
-	if(isTooLongAtEnd) {
-		strcat(t[0], "\n(");
-		strcat(t[0], currentWord);
-		strcat(t[0], ") \'");
-	}
-	
-	return t;
-}
-*/
-
 int createFormattedText(char** buf, char inputText[]) {
 	const int LENGTH = 4096;
 	int pageIndex = 0;
@@ -192,7 +127,6 @@ int createFormattedText(char** buf, char inputText[]) {
 				characterCount = 0;
 				rowCount++;
 				if (rowCount > 1) {
-				// if (rowCount > 10) {
 					pageIndex++;
 					rowCount = 0;
 					buf[pageIndex] = malloc(LENGTH);
@@ -233,16 +167,12 @@ int createFormattedText(char** buf, char inputText[]) {
 
 Object createTextObject(int objectNumber, char text[]) {
 		
-	// char **formattedText = getFormattedText(text);
-	// int textLen = strlen(formattedText[0]) + 1;
 	int textLen = strlen(text) + 1;
 	char *str = "stream\nBT\n/F1 %d Tf\n%d TL\n30 %d Td\n%s\nET\nendstream";
 	int strLength = strlen(str) + 1;
 	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE) + getDigitStringWidth(PAGELENGTH);// + 12;
 	char stream[streamLength];
-	// snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20,formattedText[0]);
 	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20, text);
-	// free(formattedText);
 	
 	int charCounter = getDigitStringWidth(streamLength);
 	char *dictStr = "<</Length %d>>\n";
@@ -295,7 +225,6 @@ int main(void) {
 	int maxObjects = 100;
 	int obsCounter = 0;
 	Object obs[maxObjects];
-	// int kidsArray[] = {4, 6};
 
 	int pagesRootNumber = ++objectCounter;
 	obs[obsCounter] = getPdfRoot(++objectCounter, pagesRootNumber);
@@ -321,40 +250,15 @@ int main(void) {
 
 	obs[obsCounter] = getPagesRoot(1, sizeof(kidsArray)/sizeof(int), kidsArray);
 	obsCounter++;
-	// obs[4]= createTextObject(++objectCounter, formattedText[1]);
-	// textObject = &obs[4];
-	//
-	// obs[5] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
-
-	// obs[2]= createTextObject(++objectCounter, textInput);
-	// Object *textObject = &obs[2];
-	//
-	// obs[3] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
-	//
-	// obs[4]= createTextObject(++objectCounter, "Hallo! Ich bin Seite 2");
-	// textObject = &obs[4];
-	//
-	// obs[5] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
 
 	printf("%s",getStart());
 
 	for (int i = 0; i < obsCounter; i++) {
 		printf("%s\n", obs[i].content);
 	}
-	// printf("%s\n", obs[0].content);
-	//
-	// printf("%s\n", obs[1].content);
-	//
-	// printf("%s\n", obs[2].content);
-	//
-	// printf("%s\n", obs[3].content);
-	// printf("%s\n", obs[4].content);
-	//
-	// printf("%s\n", obs[5].content);
 
 	char **temp = getXref(obs);
 	printf("%s", temp[0]);
-	// printf("<</Size %d /Root 1 0 R>>\n", objectCounter+1);
 	int bufLength = strlen("<</Size %d /Root %d 0 R>>\n") + getDigitStringWidth(objectCounter + 1)+1;
 	char buf[bufLength];
 	snprintf(buf, bufLength, "<</Size %d /Root %d 0 R>>\n", objectCounter+1, root->objectNumber);

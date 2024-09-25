@@ -93,6 +93,7 @@ Object createPageObject(int objectNumber, int parent, int contents) {
 	return temp;
 }
 
+/*
 char** getFormattedText(char text[]) {
 	char **t = (char**) malloc(sizeof(char*));
 	t[0] = (char*) malloc(strlen(text) + 300*sizeof(char));
@@ -155,17 +156,91 @@ char** getFormattedText(char text[]) {
 	
 	return t;
 }
+*/
+
+int createFormattedText(char** buf, char inputText[]) {
+	const int LENGTH = 4096;
+	int pageIndex = 0;
+
+	buf[pageIndex] = malloc(LENGTH);
+	strcpy(buf[pageIndex], "");
+	int rowCount = 1;
+	int characterCount = 0;
+	
+	char currentWord[100];
+	int currentWordCounter = 0;
+	strcpy(currentWord, "");
+	buf[pageIndex][0] = '(';
+	for (int i = 0; inputText[i] != '\0'; i++) {
+		if (inputText[i] != ' ')
+			currentWord[currentWordCounter] = inputText[i];
+
+		characterCount++;
+		currentWordCounter++;
+		if (inputText[i] == ' ') {
+			// 0.5 for Time Roman; 0.6 for e.g. Arial
+			char isLongerThanLine = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91;
+			if (isLongerThanLine) {
+				strcat(buf[pageIndex], ") ");
+
+				if (rowCount == 1) {
+					strcat(buf[pageIndex], "Tj");
+				} else {
+					strcat(buf[pageIndex], "\'");
+				}
+
+				characterCount = 0;
+				rowCount++;
+				if (rowCount > 10) {
+					pageIndex++;
+					rowCount = 0;
+					buf[pageIndex] = malloc(LENGTH);
+				}
+
+				strcat(buf[pageIndex], "\n(");
+				strcat(buf[pageIndex], currentWord);
+
+			} else {
+				strcat(buf[pageIndex], currentWord);
+			}
+			strcat(buf[pageIndex], " ");
+			memset(currentWord, 0, 100);
+			currentWordCounter = 0;
+		}
+	}
+
+	char isTooLongAtEnd = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91	;
+	if (!isTooLongAtEnd) {
+		strcat(buf[pageIndex], currentWord);
+	} 
+	strcat(buf[pageIndex], ") ");
+	if (rowCount == 1) {
+		strcat(buf[pageIndex], "Tj");
+	} else {
+		strcat(buf[pageIndex], "\'");
+	}
+
+	if(isTooLongAtEnd) {
+		strcat(buf[pageIndex], "\n(");
+		strcat(buf[pageIndex], currentWord);
+		strcat(buf[pageIndex], ") \'");
+	}
+	
+	return pageIndex;
+}
 
 Object createTextObject(int objectNumber, char text[]) {
 		
-	char **formattedText = getFormattedText(text);
-	int textLen = strlen(formattedText[0]) + 1;
+	// char **formattedText = getFormattedText(text);
+	// int textLen = strlen(formattedText[0]) + 1;
+	int textLen = strlen(text) + 1;
 	char *str = "stream\nBT\n/F1 %d Tf\n%d TL\n30 %d Td\n%s\nET\nendstream";
 	int strLength = strlen(str) + 1;
 	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE) + getDigitStringWidth(PAGELENGTH);// + 12;
 	char stream[streamLength];
-	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20,formattedText[0]);
-	free(formattedText);
+	// snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20,formattedText[0]);
+	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20, text);
+	// free(formattedText);
 	
 	int charCounter = getDigitStringWidth(streamLength);
 	char *dictStr = "<</Length %d>>\n";
@@ -222,22 +297,35 @@ int main(void) {
 	obs[1] = getPdfRoot(++objectCounter, pagesRootNumber);
 	Object *root = &obs[1];
 
-	obs[2]= createTextObject(++objectCounter, textInput);
+	/* maximum of 100 pages */
+	char **formattedText = malloc(sizeof(char*)*100);
+	int numberOfPages = createFormattedText(formattedText, textInput);
+
+	obs[2]= createTextObject(++objectCounter, formattedText[0]);
 	Object *textObject = &obs[2];
 
 	obs[3] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
 
-	obs[4]= createTextObject(++objectCounter, "Hallo! Ich bin Seite 2");
+	obs[4]= createTextObject(++objectCounter, formattedText[1]);
 	textObject = &obs[4];
 
 	obs[5] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
+
+	// obs[2]= createTextObject(++objectCounter, textInput);
+	// Object *textObject = &obs[2];
+	//
+	// obs[3] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
+	//
+	// obs[4]= createTextObject(++objectCounter, "Hallo! Ich bin Seite 2");
+	// textObject = &obs[4];
+	//
+	// obs[5] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
 
 	printf("%s",getStart());
 
 	printf("%s\n", obs[0].content);
 
 	printf("%s\n", obs[1].content);
-
 
 	printf("%s\n", obs[2].content);
 

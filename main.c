@@ -191,7 +191,8 @@ int createFormattedText(char** buf, char inputText[]) {
 
 				characterCount = 0;
 				rowCount++;
-				if (rowCount > 10) {
+				if (rowCount > 1) {
+				// if (rowCount > 10) {
 					pageIndex++;
 					rowCount = 0;
 					buf[pageIndex] = malloc(LENGTH);
@@ -226,7 +227,8 @@ int createFormattedText(char** buf, char inputText[]) {
 		strcat(buf[pageIndex], ") \'");
 	}
 	
-	return pageIndex;
+	/* +1 as the index starts at 0 but ocunt at 1*/
+	return pageIndex+1;
 }
 
 Object createTextObject(int objectNumber, char text[]) {
@@ -290,26 +292,39 @@ int main(void) {
 		i++;
 	}
 
-	Object obs[6];
-	int kidsArray[] = {4, 6};
-	obs[0] = getPagesRoot(++objectCounter, sizeof(kidsArray)/sizeof(int), kidsArray);
-	int pagesRootNumber = objectCounter;
-	obs[1] = getPdfRoot(++objectCounter, pagesRootNumber);
-	Object *root = &obs[1];
+	int maxObjects = 100;
+	int obsCounter = 0;
+	Object obs[maxObjects];
+	// int kidsArray[] = {4, 6};
+
+	int pagesRootNumber = ++objectCounter;
+	obs[obsCounter] = getPdfRoot(++objectCounter, pagesRootNumber);
+	Object *root = &obs[obsCounter];
+	obsCounter++;
 
 	/* maximum of 100 pages */
 	char **formattedText = malloc(sizeof(char*)*100);
 	int numberOfPages = createFormattedText(formattedText, textInput);
 
-	obs[2]= createTextObject(++objectCounter, formattedText[0]);
-	Object *textObject = &obs[2];
+	int kidsArray[numberOfPages]; 
 
-	obs[3] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
+	Object *textObject ;
+	for (int i = 0; i < numberOfPages; i++) {
+		obs[obsCounter]= createTextObject(++objectCounter, formattedText[i]);
+		textObject = &obs[obsCounter];
+		obsCounter++;
 
-	obs[4]= createTextObject(++objectCounter, formattedText[1]);
-	textObject = &obs[4];
+		obs[obsCounter] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
+		kidsArray[i] = objectCounter;
+		obsCounter++;
+	}
 
-	obs[5] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
+	obs[obsCounter] = getPagesRoot(1, sizeof(kidsArray)/sizeof(int), kidsArray);
+	obsCounter++;
+	// obs[4]= createTextObject(++objectCounter, formattedText[1]);
+	// textObject = &obs[4];
+	//
+	// obs[5] = createPageObject(++objectCounter, pagesRootNumber, textObject->objectNumber);
 
 	// obs[2]= createTextObject(++objectCounter, textInput);
 	// Object *textObject = &obs[2];
@@ -323,16 +338,19 @@ int main(void) {
 
 	printf("%s",getStart());
 
-	printf("%s\n", obs[0].content);
-
-	printf("%s\n", obs[1].content);
-
-	printf("%s\n", obs[2].content);
-
-	printf("%s\n", obs[3].content);
-	printf("%s\n", obs[4].content);
-
-	printf("%s\n", obs[5].content);
+	for (int i = 0; i < obsCounter; i++) {
+		printf("%s\n", obs[i].content);
+	}
+	// printf("%s\n", obs[0].content);
+	//
+	// printf("%s\n", obs[1].content);
+	//
+	// printf("%s\n", obs[2].content);
+	//
+	// printf("%s\n", obs[3].content);
+	// printf("%s\n", obs[4].content);
+	//
+	// printf("%s\n", obs[5].content);
 
 	char **temp = getXref(obs);
 	printf("%s", temp[0]);

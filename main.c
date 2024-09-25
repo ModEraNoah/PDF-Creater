@@ -39,7 +39,6 @@ char** craftObjectContent(int objectNumber, char contentString[]) {
 	char *objectEnding = "\nendobj";
 
 	int length = strlen(objectBeginning) + strlen(contentString) + strlen(objectEnding);
-	// char *content= (char*) malloc((length + 8) * sizeof(char));
 	char *content= (char*) malloc((length+1)  * sizeof(char));
 	res[0] = content;
 
@@ -166,6 +165,7 @@ Object createTextObject(int objectNumber, char text[]) {
 	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE) + getDigitStringWidth(PAGELENGTH);// + 12;
 	char stream[streamLength];
 	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20,formattedText[0]);
+	free(formattedText);
 	
 	int charCounter = getDigitStringWidth(streamLength);
 	char *dictStr = "<</Length %d>>\n";
@@ -192,7 +192,7 @@ char** getXref(Object obs[]) {
 	char temp[6] = "0 ";
 	strcat(temp, num);
 	t[0] = malloc(1000 * sizeof(char));
-	strcat(t[0], "xref\n");
+	strcpy(t[0], "xref\n");
 	strcat(t[0], temp);
 	strcat(t[0],"0000000000 65535 f\n");
 	for (int i = 0; i < objectCounter; i++) {

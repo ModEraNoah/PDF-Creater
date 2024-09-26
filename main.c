@@ -5,9 +5,10 @@
 #include <sys/types.h>
 #include "./fonts.c"
 
-#define FONTSIZE 22
+#define FONTSIZE 12
 #define PAGEWIDTH 595
 #define PAGELENGTH 842
+#define ROWDISTANCE 1.5
 
 static uint objectCounter = 0;
 
@@ -137,7 +138,7 @@ int createFormattedText(char** buf, char inputText[]) {
 		widthCounter += currentWidth;
 		wordWidth += currentWidth;
 		if (inputText[i] == ' ') {
-			char isLongerThanLine = (PAGEWIDTH - 90 - (FONTSIZE)) - widthCounter < 0;
+			char isLongerThanLine = PAGEWIDTH - 100 - FONTSIZE - widthCounter < 0;
 			if (isLongerThanLine) {
 				strcat(buf[pageIndex], ") ");
 
@@ -150,7 +151,7 @@ int createFormattedText(char** buf, char inputText[]) {
 				characterCount = 0;
 				rowCount++;
 				// if (rowCount > 10) {
-				if (PAGELENGTH - (rowCount * FONTSIZE) - 35 <= 0) {
+				if (PAGELENGTH - (rowCount * FONTSIZE * ROWDISTANCE) - 35 <= 0) {
 					pageIndex++;
 					rowCount = 1;
 					buf[pageIndex] = malloc(LENGTH);
@@ -197,11 +198,11 @@ int createFormattedText(char** buf, char inputText[]) {
 Object createTextObject(int objectNumber, char text[]) {
 		
 	int textLen = strlen(text) + 1;
-	char *str = "stream\nBT\n/F1 %d Tf\n%d TL\n30 %d Td\n%s\nET\nendstream";
+	char *str = "stream\nBT\n/F1 %d Tf\n%f TL\n30 %d Td\n%s\nET\nendstream";
 	int strLength = strlen(str) + 1;
-	int streamLength = textLen + strLength + 1 + 2*getDigitStringWidth(FONTSIZE) + getDigitStringWidth(PAGELENGTH);// + 12;
+	int streamLength = textLen + strLength + 1 + getDigitStringWidth(FONTSIZE) + getDigitStringWidth(FONTSIZE) * ROWDISTANCE+ getDigitStringWidth(PAGELENGTH);// + 12;
 	char stream[streamLength];
-	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE, PAGELENGTH - FONTSIZE - 20, text);
+	snprintf(stream, streamLength, str, FONTSIZE, FONTSIZE * ROWDISTANCE , PAGELENGTH - FONTSIZE - 20, text);
 	
 	int charCounter = getDigitStringWidth(streamLength);
 	char *dictStr = "<</Length %d>>\n";

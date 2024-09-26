@@ -1,4 +1,0 @@
-- xref Berechnung korrigieren
-- funktion, um kokpmletten objekt-string zu bkeommen, nicht nur inhalt
-- funktion, um länge ienes objekts zu bekommen (inkl. x 0 obj und endobj)
-- vollständiges xref

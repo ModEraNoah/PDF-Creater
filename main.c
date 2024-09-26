@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include "./fonts.c"
 
-#define FONTSIZE 12
+#define FONTSIZE 22
 #define PAGEWIDTH 595
 #define PAGELENGTH 842
 
@@ -40,6 +41,9 @@ char** craftObjectContent(int objectNumber, char contentString[]) {
 
 	int length = strlen(objectBeginning) + strlen(contentString) + strlen(objectEnding);
 	char *content= (char*) malloc((length+1)  * sizeof(char));
+	if (content == NULL) {
+		return res;
+	}
 	res[0] = content;
 
 	strcat(content, objectBeginning);
@@ -61,14 +65,20 @@ Object getPdfRoot(int objectNumber, int pagesObjectNumber) {
 }
 
 Object getPagesRoot(int objectNumber, int count, int kids[]) {
-	char kidsArray[200];
-	memset(kidsArray,0,200);
+	int sumOfKidsDigits = 0;
+	for (int i = 0; i < count; i++) {
+		sumOfKidsDigits += getDigitStringWidth(kids[i]);
+	}
+
+	int kidsArrayLength = strlen(" 0 R ")*count + sumOfKidsDigits;
+	char kidsArray[kidsArrayLength];
+	memset(kidsArray,0,kidsArrayLength);
 	for (int i = 0; i < count; i++) {
 		char tmp[20];
 		snprintf(tmp, 20, "%d 0 R ", kids[i]);
 		strcat(kidsArray, tmp);
 	}
-	char str[200];
+	char str[52 + kidsArrayLength + getDigitStringWidth(count) + getDigitStringWidth(PAGEWIDTH) + getDigitStringWidth(PAGELENGTH)];
 	sprintf(str, "<</Type /Pages /Kids [%s] /Count %d /MediaBox [0 0 %d %d]>>",kidsArray, count,PAGEWIDTH, PAGELENGTH);
 	char **content = craftObjectContent(objectNumber, str);
 
@@ -94,27 +104,40 @@ Object createPageObject(int objectNumber, int parent, int contents) {
 }
 
 int createFormattedText(char** buf, char inputText[]) {
-	const int LENGTH = 4096;
+	const int LENGTH = 8192;
 	int pageIndex = 0;
 
 	buf[pageIndex] = malloc(LENGTH);
+	if (buf[pageIndex] == NULL) {
+		return pageIndex + 1;
+	}
+
 	strcpy(buf[pageIndex], "");
 	int rowCount = 1;
 	int characterCount = 0;
 	
-	char currentWord[100];
+	char currentWord[120];
 	int currentWordCounter = 0;
 	strcpy(currentWord, "");
 	buf[pageIndex][0] = '(';
+
+	float widthCounter = 0;
+	float wordWidth = 0;
 	for (int i = 0; inputText[i] != '\0'; i++) {
-		if (inputText[i] != ' ')
+		if (inputText[i] != ' ') 
 			currentWord[currentWordCounter] = inputText[i];
 
 		characterCount++;
 		currentWordCounter++;
+
+		float currentWidth = ((float)(TIMES_WIDTH[inputText[i]-32]/1000.0)*FONTSIZE);
+		if (currentWidth < 0.0) {
+			currentWidth = 8.0; 
+		}
+		widthCounter += currentWidth;
+		wordWidth += currentWidth;
 		if (inputText[i] == ' ') {
-			// 0.5 for Time Roman; 0.6 for e.g. Arial
-			char isLongerThanLine = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91;
+			char isLongerThanLine = (PAGEWIDTH - 90 - (FONTSIZE)) - widthCounter < 0;
 			if (isLongerThanLine) {
 				strcat(buf[pageIndex], ") ");
 
@@ -126,14 +149,19 @@ int createFormattedText(char** buf, char inputText[]) {
 
 				characterCount = 0;
 				rowCount++;
-				if (rowCount > 1) {
+				// if (rowCount > 10) {
+				if (PAGELENGTH - (rowCount * FONTSIZE) - 35 <= 0) {
 					pageIndex++;
-					rowCount = 0;
+					rowCount = 1;
 					buf[pageIndex] = malloc(LENGTH);
+					if (buf[pageIndex] == NULL) {
+						return pageIndex + 1;
+					}
 				}
 
 				strcat(buf[pageIndex], "\n(");
 				strcat(buf[pageIndex], currentWord);
+				widthCounter = wordWidth;
 
 			} else {
 				strcat(buf[pageIndex], currentWord);
@@ -141,10 +169,11 @@ int createFormattedText(char** buf, char inputText[]) {
 			strcat(buf[pageIndex], " ");
 			memset(currentWord, 0, 100);
 			currentWordCounter = 0;
+			wordWidth = 0;
 		}
 	}
 
-	char isTooLongAtEnd = ((PAGEWIDTH - (5.2* FONTSIZE))/(0.5 * FONTSIZE * characterCount)) < 0.91	;
+	char isTooLongAtEnd = (PAGEWIDTH - (FONTSIZE * 3)) - widthCounter < 0;
 	if (!isTooLongAtEnd) {
 		strcat(buf[pageIndex], currentWord);
 	} 
@@ -222,7 +251,7 @@ int main(void) {
 		i++;
 	}
 
-	int maxObjects = 100;
+	int maxObjects = 200;
 	int obsCounter = 0;
 	Object obs[maxObjects];
 

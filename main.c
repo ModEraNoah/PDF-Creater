@@ -30,8 +30,7 @@ int getDigitStringWidth(int digit) {
 	return charCounter;
 }
 
-char** craftObjectContent(int objectNumber, char contentString[]) {
-	char **res = malloc(sizeof(char*));
+void craftObjectContent(int objectNumber, char contentString[],char** res) {
 
 	int charCounter = getDigitStringWidth(objectNumber);
 
@@ -43,15 +42,13 @@ char** craftObjectContent(int objectNumber, char contentString[]) {
 	int length = strlen(objectBeginning) + strlen(contentString) + strlen(objectEnding);
 	char *content= (char*) malloc((length+1)  * sizeof(char));
 	if (content == NULL) {
-		return res;
+		return;
 	}
 	res[0] = content;
 
-	strcat(content, objectBeginning);
+	strcpy(content, objectBeginning);
 	strcat(content, contentString);
 	strcat(content, objectEnding);
-
-	return res;
 }
 
 Object getPdfRoot(int objectNumber, int pagesObjectNumber) {
@@ -59,9 +56,12 @@ Object getPdfRoot(int objectNumber, int pagesObjectNumber) {
 	int len = strlen(tmp) + getDigitStringWidth(pagesObjectNumber) + 1;
 	char buf[len];
 	snprintf(buf, len, "<</Type /Catalog /Pages %d 0 R>>", pagesObjectNumber);
-	char **content = craftObjectContent(objectNumber, buf);
+
+	char **content = malloc(sizeof(char*));
+	craftObjectContent(objectNumber, buf, content);
 
 	Object temp = {objectNumber, *content};
+	free(content);
 	return temp;
 }
 
@@ -81,9 +81,12 @@ Object getPagesRoot(int objectNumber, int count, int kids[]) {
 	}
 	char str[52 + kidsArrayLength + getDigitStringWidth(count) + getDigitStringWidth(PAGEWIDTH) + getDigitStringWidth(PAGELENGTH)];
 	sprintf(str, "<</Type /Pages /Kids [%s] /Count %d /MediaBox [0 0 %d %d]>>",kidsArray, count,PAGEWIDTH, PAGELENGTH);
-	char **content = craftObjectContent(objectNumber, str);
+
+	char **content = malloc(sizeof(char*));
+	craftObjectContent(objectNumber, str, content);
 
 	Object temp = {objectNumber,*content};
+	free(content);
 	return temp;
 }
 
@@ -98,9 +101,11 @@ Object createPageObject(int objectNumber, int parent, int contents) {
 	char contentString[contentLength + additionalLen];
 	snprintf(contentString, contentLength, str, parent, contents);
 
-	char **content = craftObjectContent(objectNumber, contentString);
+	char **content = malloc(sizeof(char*));
+	craftObjectContent(objectNumber, contentString, content);
 
 	Object temp = {objectNumber,*content};
+	free(content);
 	return temp;
 }
 
@@ -155,6 +160,7 @@ int createFormattedText(char** buf, char inputText[]) {
 					pageIndex++;
 					rowCount = 1;
 					buf[pageIndex] = malloc(LENGTH);
+					strcpy(buf[pageIndex], "");
 					if (buf[pageIndex] == NULL) {
 						return pageIndex + 1;
 					}
@@ -214,9 +220,11 @@ Object createTextObject(int objectNumber, char text[]) {
 	strcpy(contentString, dict);
 	strcat(contentString,stream);
 
-	char **content = craftObjectContent(objectNumber, contentString);
+	char **content = malloc(sizeof(char*));
+	craftObjectContent(objectNumber, contentString, content);
 
 	Object temp = {objectNumber,*content};
+	free(content);
 	return temp;
 }
 
@@ -263,13 +271,18 @@ int main(void) {
 
 	/* maximum of 100 pages */
 	char **formattedText = malloc(sizeof(char*)*100);
+	if (formattedText == NULL) {
+		printf("could not allocate memory for formatted text\n");
+	}
 	int numberOfPages = createFormattedText(formattedText, textInput);
+	free(textInput);
 
 	int kidsArray[numberOfPages]; 
 
 	Object *textObject ;
 	for (int i = 0; i < numberOfPages; i++) {
 		obs[obsCounter]= createTextObject(++objectCounter, formattedText[i]);
+		free(formattedText[i]);
 		textObject = &obs[obsCounter];
 		obsCounter++;
 
@@ -277,6 +290,7 @@ int main(void) {
 		kidsArray[i] = objectCounter;
 		obsCounter++;
 	}
+	free(formattedText);
 
 	obs[obsCounter] = getPagesRoot(1, sizeof(kidsArray)/sizeof(int), kidsArray);
 	obsCounter++;

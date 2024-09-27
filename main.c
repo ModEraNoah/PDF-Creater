@@ -113,19 +113,19 @@ int createFormattedText(char** buf, char inputText[]) {
 	const int LENGTH = 8192;
 	int pageIndex = 0;
 
-	buf[pageIndex] = malloc(LENGTH);
+	buf[pageIndex] = malloc(LENGTH * sizeof(char) + 1);
 	if (buf[pageIndex] == NULL) {
 		return pageIndex + 1;
 	}
 
-	strcpy(buf[pageIndex], "");
 	int rowCount = 1;
 	int characterCount = 0;
 	
 	char currentWord[120];
 	int currentWordCounter = 0;
+	memset(currentWord, 0, sizeof(currentWord));
 	strcpy(currentWord, "");
-	buf[pageIndex][0] = '(';
+	strcpy(buf[pageIndex], "(");
 
 	float widthCounter = 0;
 	float wordWidth = 0;
@@ -145,6 +145,7 @@ int createFormattedText(char** buf, char inputText[]) {
 		if (inputText[i] == ' ') {
 			char isLongerThanLine = PAGEWIDTH - 100 - FONTSIZE - widthCounter < 0;
 			if (isLongerThanLine) {
+
 				strcat(buf[pageIndex], ") ");
 
 				if (rowCount == 1) {
@@ -174,7 +175,7 @@ int createFormattedText(char** buf, char inputText[]) {
 				strcat(buf[pageIndex], currentWord);
 			}
 			strcat(buf[pageIndex], " ");
-			memset(currentWord, 0, 100);
+			memset(currentWord, 0, sizeof(currentWord));
 			currentWordCounter = 0;
 			wordWidth = 0;
 		}
@@ -264,7 +265,7 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	char *textInput = malloc(10000 * sizeof(char));
+	char *textInput = malloc(100000 * sizeof(char));
 	if (textInput == NULL) {
 		printf("some issue with allocating the memory for textInput\n");
 		return -1;
@@ -280,7 +281,7 @@ int main(int argc, char** argv) {
 	} 
 	
 	int cur;
-	int i = 0;
+	long i = 0;
 	while ((cur = fgetc(file)) != EOF) {
 		textInput[i] = cur;
 		i++;
@@ -288,13 +289,6 @@ int main(int argc, char** argv) {
 	textInput[i] = '\0';
 
 	fclose(file);
-
-	// int c;
-	// int i = 0;
-	// while ((c = getchar()) != EOF) {
-	// 	textInput[i] = c;
-	// 	i++;
-	// }
 
 	int maxObjects = 200;
 	int obsCounter = 0;

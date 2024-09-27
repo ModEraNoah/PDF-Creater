@@ -341,10 +341,6 @@ int main(int argc, char** argv) {
 	printf("%d\n", currentLength);
 	printf("%%%%EOF\n");
 
-	// for (int i= 0; i < obsCounter - 1; i++) {
-	// 	free(obs[obsCounter].content);
-	// }
-
 	for (int i = 0; i < obsCounter; i++) {
 		free(obs[i].content);
 	}

@@ -251,14 +251,50 @@ char** getXref(Object obs[]) {
 	return t;
 }
 
-int main(void) {
+int main(int argc, char** argv) {
+	if (argc < 2) {
+		printf("No file specified\n");
+		printf("File has to be given with the flag --file\n");
+		return -1;
+	}
+
+	if (strcmp(argv[1], "--file") != 0) {
+		printf("File has to be given with the flag --file\n");
+		printf("unknown flag %s", argv[1]);
+		return -1;
+	}
+
 	char *textInput = malloc(10000 * sizeof(char));
-	int c;
+	if (textInput == NULL) {
+		printf("some issue with allocating the memory for textInput\n");
+		return -1;
+	}
+	strcpy(textInput, "");
+
+	FILE *file;
+	file = fopen(argv[2], "r");
+
+	if (!file) {
+		printf("Some issue with the file '%s'!\n", argv[2]);
+		return -1;
+	} 
+	
+	int cur;
 	int i = 0;
-	while ((c = getchar()) != EOF) {
-		textInput[i] = c;
+	while ((cur = fgetc(file)) != EOF) {
+		textInput[i] = cur;
 		i++;
 	}
+	textInput[i] = '\0';
+
+	fclose(file);
+
+	// int c;
+	// int i = 0;
+	// while ((c = getchar()) != EOF) {
+	// 	textInput[i] = c;
+	// 	i++;
+	// }
 
 	int maxObjects = 200;
 	int obsCounter = 0;
@@ -311,6 +347,14 @@ int main(void) {
 	printf("%d\n", currentLength);
 	printf("%%%%EOF\n");
 
+	// for (int i= 0; i < obsCounter - 1; i++) {
+	// 	free(obs[obsCounter].content);
+	// }
+
+	for (int i = 0; i < obsCounter; i++) {
+		free(obs[i].content);
+	}
+	free(temp[0]);
 	free(temp);
 
 	return 0;
